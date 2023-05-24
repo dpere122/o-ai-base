@@ -1,5 +1,4 @@
-import express from 'express'
-import https from 'https'
+import express, { response } from 'express'
 import {Configuration, OpenAIApi} from 'openai'
 import dotenv from 'dotenv'
 
@@ -11,18 +10,23 @@ const app = express()
 dotenv.config()
 app.use(express.json());
 
+var userConvos = [];
+
 const configuration = new Configuration({
     apiKey: process.env.OPENAI_KEY,
 });
 const openai = new OpenAIApi(configuration);
 
+/*
+    Each user uses an instance of their own chat messages in each live session.
+    Each user must be saved using a session ID of sorts
+*/
 async function iniChat(message:string){
-    await JSON.stringify(openai.createChatCompletion({
+    const results = await openai.createChatCompletion({
         model: 'gpt-3.5-turbo',
-        messages: [{role:'user',content:message}]
-    }).then((response)=>{
-        console.log(response.data.choices[0].message);
-    }));
+        messages: [{ role: 'user', content: message }]
+    });
+    return results.data.choices[0].message?.content;
 };
 
 
@@ -30,13 +34,10 @@ app.get('/',(req,rest)=>{
     return rest.send("Welcome to the simple OpenAI Chat model!");
 });
 
-app.post('/api/data',async (req,res)=>{
+app.post('/api/prompt',async (req,res)=>{
     const chatInput = JSON.stringify(req.body.message);
-    console.log(chatInput);
-    iniChat(chatInput)
-    // const parsedRes = JSON.parse(await iniChat(chatInput));
-    // console.log(parsedRes.data);
-    return res.sendStatus(200);
+    const results = await iniChat(chatInput);
+    return res.send(results);
 });
 
 app.listen(3000,()=>{

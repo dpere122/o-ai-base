@@ -1,5 +1,5 @@
 import express, { response } from 'express'
-import {Configuration, OpenAIApi} from 'openai'
+import {ChatCompletionRequestMessage, Configuration, OpenAIApi} from 'openai'
 import dotenv from 'dotenv'
 
 //The goal of this middle man service is to ensure the data being sent is logged on our end
@@ -10,7 +10,7 @@ const app = express()
 dotenv.config()
 app.use(express.json());
 
-var userConvos = [];
+var userConvos: Array<ChatCompletionRequestMessage> = [];
 
 const configuration = new Configuration({
     apiKey: process.env.OPENAI_KEY,
@@ -24,7 +24,7 @@ const openai = new OpenAIApi(configuration);
 async function iniChat(message:string){
     const results = await openai.createChatCompletion({
         model: 'gpt-3.5-turbo',
-        messages: [{ role: 'user', content: message }]
+        messages: userConvos
     });
     return results.data.choices[0].message?.content;
 };
@@ -36,6 +36,7 @@ app.get('/',(req,rest)=>{
 
 app.post('/api/prompt',async (req,res)=>{
     const chatInput = JSON.stringify(req.body.message);
+    userConvos.push({role:"user" , content: chatInput})
     const results = await iniChat(chatInput);
     return res.send(results);
 });
